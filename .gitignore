@@ -1,0 +1,56 @@
+# --- Python ---
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# --- Secrets ---
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# --- Node / frontend ---
+node_modules/
+dist/
+.vite/
+*.log
+npm-debug.log*
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db
+
+# --- Editor/IDE ---
+.vscode/
+.idea/
+*.swp
+
+# --- ANNOVAR install + reference databases (huge, redownloadable, not source) ---
+code/annovar/
+code/annovar.latest.tar.gz
+**/annovar/humandb/
+
+# --- Trained models, feature tables, cached API pulls, intermediate artifacts ---
+# (multi-GB in places; regenerable by re-running the pipeline scripts, not meant to live in git)
+code/data/
+webapp/backend/*.joblib
+webapp/backend/*.cbm
+
+# --- Deck watcher process/state files (local run state, not source) ---
+code/.deck_watch_state.json
+code/.deck_auto_updated.flag
+
+# --- Working-notes scratch folder from cleanup passes ---
+_to_delete/
+_to_delete_*/
+
+# --- Slide deck build/temp artifacts, if any get generated alongside the real one ---
+~$*.pptx
+*.pptx.tmp

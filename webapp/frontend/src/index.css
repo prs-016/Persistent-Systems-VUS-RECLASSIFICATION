@@ -1,0 +1,129 @@
+/* ---------------------------------------------------------------------
+   Design tokens. One deliberate palette, one type pairing, one radius
+   scale. Everything in the app draws from these variables rather than
+   ad-hoc values, so nothing drifts from screen to screen.
+--------------------------------------------------------------------- */
+:root {
+  --bg: #faf3dd;
+  --surface: #fffdf6;
+  --surface-sunken: #f5ecce;
+  --border: #e6d9a8;
+  --border-strong: #d3c07e;
+
+  --ink: #211c0c;
+  --ink-muted: #4e441f;
+  --ink-faint: #6c5f34;
+
+  --accent: #3b5c50;
+  --accent-strong: #2a463c;
+  --accent-soft: #e7edd9;
+
+  --pathogenic: #8a3324;
+  --pathogenic-soft: #f3e4e0;
+  --benign: #3b6e4a;
+  --benign-soft: #e5eee6;
+  --somatic: #8a5a24;
+  --somatic-soft: #f2e9dc;
+  --germline: #2f5c6b;
+  --germline-soft: #e4edf0;
+  --vus: #565248;
+  --vus-soft: #eeece5;
+  --flag: #8a3324;
+
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 10px;
+
+  --shadow-1: 0 1px 2px rgba(30, 28, 23, 0.05);
+  --shadow-2: 0 2px 10px rgba(30, 28, 23, 0.06);
+
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+
+  color-scheme: light;
+  --transition-theme: background 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+[data-theme="dark"] {
+  --bg: #16150f;
+  --surface: #1e1d16;
+  --surface-sunken: #26241a;
+  --border: #3a3728;
+  --border-strong: #4d4934;
+
+  --ink: #ece8dc;
+  --ink-muted: #ada894;
+  --ink-faint: #7d7a67;
+
+  --accent: #6fa08c;
+  --accent-strong: #8bbba8;
+  --accent-soft: #22322b;
+
+  --pathogenic: #d9917e;
+  --pathogenic-soft: #392621;
+  --benign: #82c093;
+  --benign-soft: #1f2f24;
+  --somatic: #d0a561;
+  --somatic-soft: #352918;
+  --germline: #83b7c7;
+  --germline-soft: #1e2c30;
+  --vus: #c7c3b2;
+  --vus-soft: #29271d;
+  --flag: #d9917e;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-2: 0 2px 14px rgba(0, 0, 0, 0.4);
+
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+html { background: var(--bg); }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  transition: var(--transition-theme);
+}
+
+.panel, .site-header, .site-footer, .stat-cell, input, select, button, .filerow, .dropzone {
+  transition: var(--transition-theme);
+}
+
+button, input, select {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+a { color: var(--accent-strong); }
+
+::selection { background: var(--accent-soft); }
+
+.tabular { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--font-mono); }
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 0.9; } }

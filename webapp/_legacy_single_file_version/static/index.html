@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VUS Classifier — Somatic / Germline / VUS Triage</title>
+<style>
+  :root {
+    --navy: #0f2540;
+    --navy-2: #16345c;
+    --accent: #2b7fd6;
+    --accent-2: #1a5fa8;
+    --ink: #16202b;
+    --muted: #5a6b7a;
+    --line: #e3e8ee;
+    --bg: #f6f8fb;
+    --card: #ffffff;
+    --somatic: #b5541e;
+    --germline: #1a7a4c;
+    --path: #a52222;
+    --benign: #1a7a4c;
+    --watch: #a52222;
+    --modest: #b8860b;
+    --none: #7a8896;
+    --below: #9aa5ae;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+  }
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-2) 100%);
+    color: #fff;
+    padding: 28px 40px;
+  }
+  header .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  header .mark {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.14);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 18px;
+  }
+  header h1 { margin: 0; font-size: 20px; font-weight: 650; letter-spacing: 0.2px; }
+  header p { margin: 4px 0 0; font-size: 13px; color: rgba(255,255,255,0.72); }
+
+  main {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 40px 80px;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 2px rgba(15,37,64,0.04);
+  }
+
+  .panel h2 {
+    font-size: 15px;
+    margin: 0 0 4px;
+    color: var(--navy);
+  }
+  .panel .sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 0 18px;
+  }
+
+  .dropzone {
+    border: 2px dashed #c3d0dd;
+    border-radius: var(--radius);
+    padding: 34px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    background: #fafcfe;
+  }
+  .dropzone.drag { border-color: var(--accent); background: #eef5fd; }
+  .dropzone .icon { font-size: 26px; margin-bottom: 8px; }
+  .dropzone .primary { font-size: 14px; font-weight: 600; color: var(--navy); }
+  .dropzone .secondary { font-size: 12.5px; color: var(--muted); margin-top: 4px; }
+  #fileInput { display: none; }
+
+  .filerow {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 14px;
+    padding: 10px 14px;
+    background: #f0f4f8;
+    border-radius: 8px;
+    font-size: 13px;
+  }
+  .filerow.show { display: flex; }
+  .filerow .name { font-weight: 600; color: var(--navy); }
+  .filerow button {
+    border: none; background: none; color: var(--muted); cursor: pointer; font-size: 13px;
+  }
+
+  .controls-row {
+    display: flex; gap: 14px; align-items: center; margin-top: 16px; flex-wrap: wrap;
+  }
+  .controls-row label { font-size: 13px; color: var(--muted); }
+  .controls-row select {
+    padding: 7px 10px; border-radius: 7px; border: 1px solid var(--line); font-size: 13px;
+  }
+  .run-btn {
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .run-btn:hover { background: var(--accent-2); }
+  .run-btn:disabled { background: #a9c3dd; cursor: not-allowed; }
+
+  #progressWrap { display: none; margin-top: 18px; }
+  #progressWrap.show { display: block; }
+  .progress-bar {
+    height: 6px; border-radius: 4px; background: #e3e8ee; overflow: hidden;
+  }
+  .progress-bar .fill {
+    height: 100%; width: 30%; background: var(--accent);
+    animation: indet 1.3s ease-in-out infinite;
+  }
+  @keyframes indet {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(330%); }
+  }
+  .progress-msg { font-size: 12.5px; color: var(--muted); margin-top: 8px; }
+  .error-box {
+    display: none;
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: #fdecec;
+    border: 1px solid #f3c6c6;
+    border-radius: 8px;
+    color: #9c2626;
+    font-size: 13px;
+  }
+  .error-box.show { display: block; }
+
+  #results { display: none; }
+  #results.show { display: block; }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .stat {
+    background: #f7fafd;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .stat .num { font-size: 22px; font-weight: 700; color: var(--navy); }
+  .stat .lbl { font-size: 11.5px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.4px; }
+  .stat.flagged .num { color: var(--watch); }
+
+  .filters { display: flex; gap: 10px; margin: 4px 0 16px; flex-wrap: wrap; }
+  .filters button {
+    border: 1px solid var(--line);
+    background: #fff;
+    padding: 6px 13px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    cursor: pointer;
+    color: var(--muted);
+  }
+  .filters button.active {
+    background: var(--navy);
+    color: #fff;
+    border-color: var(--navy);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 12.8px; }
+  thead th {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 2px solid var(--line);
+    color: var(--muted);
+    font-weight: 650;
+    font-size: 11.3px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+  tbody td {
+    padding: 9px 10px;
+    border-bottom: 1px solid #eef1f5;
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: #f9fbfd; }
+  tbody tr.flagged { background: #fdf6ee; }
+  tbody tr.flagged:hover { background: #fbeedb; }
+
+  .pill {
+    display: inline-block;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 650;
+  }
+  .pill.somatic { background: #fbe9dd; color: var(--somatic); }
+  .pill.germline { background: #e1f3e8; color: var(--germline); }
+  .pill.pathogenic { background: #fbdddd; color: var(--path); }
+  .pill.benign { background: #e1f3e8; color: var(--benign); }
+  .pill.vus { background: #ecefF3; color: #40506a; }
+  .band-watch { color: var(--watch); font-weight: 650; }
+  .band-modest { color: var(--modest); font-weight: 600; }
+  .band-none { color: var(--none); }
+  .band-below { color: var(--below); }
+  .flag-badge {
+    font-size: 11px; font-weight: 700; color: #fff;
+    background: var(--watch); padding: 2px 8px; border-radius: 5px;
+  }
+
+  .empty-state { text-align: center; padding: 30px; color: var(--muted); font-size: 13px; }
+  footer.note {
+    font-size: 11.5px; color: var(--muted); margin-top: 18px; line-height: 1.6;
+    border-top: 1px solid var(--line); padding-top: 14px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="mark">VC</div>
+    <div>
+      <h1>VUS Classifier</h1>
+      <p>Somatic / Germline / VUS triage &amp; reclassification-review flagging — Persistent Systems internship pipeline</p>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>1. Upload a patient variant file</h2>
+    <p class="sub">Accepts MAF, gzipped MAF (.maf.gz), or VCF/TCF-format files. Runs the trained Stage 1 (Germline / Somatic / VUS) and Stage 2 (reclassification-likelihood) models against your own file.</p>
+
+    <div class="dropzone" id="dropzone">
+      <div class="icon">📄</div>
+      <div class="primary">Click to choose a file, or drag one here</div>
+      <div class="secondary">.maf · .maf.gz · .vcf · .tcf</div>
+      <input type="file" id="fileInput" accept=".maf,.gz,.vcf,.tcf,.txt">
+    </div>
+
+    <div class="filerow" id="filerow">
+      <span><span class="name" id="fileName"></span> <span id="fileSize" style="color:var(--muted)"></span></span>
+      <button id="clearFile">Remove</button>
+    </div>
+
+    <div class="controls-row">
+      <label for="tissue">Tissue context (for HPA expression lookup):</label>
+      <select id="tissue">
+        <option value="breast">Breast</option>
+        <option value="lung">Lung</option>
+        <option value="colon">Colon</option>
+        <option value="skin">Skin</option>
+        <option value="stomach">Stomach</option>
+        <option value="ovary">Ovary</option>
+        <option value="prostate">Prostate</option>
+        <option value="other">Other / unspecified</option>
+      </select>
+      <button class="run-btn" id="runBtn" disabled>Run Classification</button>
+    </div>
+
+    <div id="progressWrap">
+      <div class="progress-bar"><div class="fill"></div></div>
+      <div class="progress-msg" id="progressMsg">Starting…</div>
+    </div>
+    <div class="error-box" id="errorBox"></div>
+  </section>
+
+  <section class="panel" id="results">
+    <h2>2. Results</h2>
+    <p class="sub">Every variant, its ClinVar resolution status, the Stage 1 origin call for anything left as VUS, and the Stage 2 reclassification-review flag.</p>
+
+    <div class="summary-grid" id="summaryGrid"></div>
+
+    <div class="filters" id="filters" style="margin-top:20px;">
+      <button data-filter="all" class="active">All variants</button>
+      <button data-filter="flagged">Flagged for review</button>
+      <button data-filter="vus">VUS only</button>
+      <button data-filter="pathogenic">Pathogenic</button>
+      <button data-filter="benign">Benign</button>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table id="resultsTable">
+        <thead>
+          <tr>
+            <th>Gene</th>
+            <th>Chrom : Pos</th>
+            <th>Ref &gt; Alt</th>
+            <th>VAF</th>
+            <th>gnomAD AF</th>
+            <th>ClinVar status</th>
+            <th>Stage 1 call</th>
+            <th>Confidence</th>
+            <th>Reclass. score</th>
+            <th>Band</th>
+            <th>Flag</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">No variants match this filter.</div>
+    </div>
+
+    <footer class="note">
+      Stage 1 predicts <strong>Germline vs. Somatic origin</strong> only for variants ClinVar cannot already resolve confidently (XGBoost, production threshold 0.9218) — it does not itself assign pathogenicity. Stage 2's reclassification score estimates how similar a VUS is, feature-wise, to VUS that have historically been reclassified in ClinVar (submission-history-free "generalizable" model, since freshly uploaded variants have no ClinVar history yet) — read it as a triage signal, not a clinical determination. "Watch closely" = score ≥ 0.60; "Modest signal" = above the model's flat baseline; "No distinguishing signal" = exactly at baseline; "Below baseline" = below it.
+    </footer>
+  </section>
+</main>
+
+<script>
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const filerow = document.getElementById('filerow');
+const fileNameEl = document.getElementById('fileName');
+const fileSizeEl = document.getElementById('fileSize');
+const clearFileBtn = document.getElementById('clearFile');
+const runBtn = document.getElementById('runBtn');
+const progressWrap = document.getElementById('progressWrap');
+const progressMsg = document.getElementById('progressMsg');
+const errorBox = document.getElementById('errorBox');
+const resultsSection = document.getElementById('results');
+const summaryGrid = document.getElementById('summaryGrid');
+const resultsBody = document.getElementById('resultsBody');
+const emptyState = document.getElementById('emptyState');
+const filtersEl = document.getElementById('filters');
+
+let selectedFile = null;
+let lastVariants = [];
+let currentFilter = 'all';
+
+function fmtSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', (e) => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) setFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', () => {
+  if (fileInput.files.length) setFile(fileInput.files[0]);
+});
+clearFileBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  selectedFile = null;
+  filerow.classList.remove('show');
+  runBtn.disabled = true;
+  fileInput.value = '';
+});
+
+function setFile(f) {
+  selectedFile = f;
+  fileNameEl.textContent = f.name;
+  fileSizeEl.textContent = '(' + fmtSize(f.size) + ')';
+  filerow.classList.add('show');
+  runBtn.disabled = false;
+  errorBox.classList.remove('show');
+}
+
+runBtn.addEventListener('click', async () => {
+  if (!selectedFile) return;
+  runBtn.disabled = true;
+  progressWrap.classList.add('show');
+  errorBox.classList.remove('show');
+  resultsSection.classList.remove('show');
+  progressMsg.textContent = 'Uploading…';
+
+  const form = new FormData();
+  form.append('file', selectedFile, selectedFile.name);
+  form.append('tissue', document.getElementById('tissue').value);
+
+  try {
+    const resp = await fetch('/api/classify', { method: 'POST', body: form });
+    const data = await resp.json();
+    if (data.error) { showError(data.error); return; }
+    pollJob(data.job_id);
+  } catch (err) {
+    showError('Could not reach the local server: ' + err.message);
+  }
+});
+
+function showError(msg) {
+  progressWrap.classList.remove('show');
+  errorBox.textContent = msg;
+  errorBox.classList.add('show');
+  runBtn.disabled = false;
+}
+
+async function pollJob(jobId) {
+  try {
+    const resp = await fetch('/api/status/' + jobId);
+    const data = await resp.json();
+    if (data.status === 'error') { showError(data.message || 'Pipeline failed.'); return; }
+    progressMsg.textContent = data.message || '…';
+    if (data.status === 'done') {
+      progressWrap.classList.remove('show');
+      runBtn.disabled = false;
+      renderResults(data.result);
+      return;
+    }
+    setTimeout(() => pollJob(jobId), 1200);
+  } catch (err) {
+    showError('Lost connection while checking progress: ' + err.message);
+  }
+}
+
+function renderResults(result) {
+  lastVariants = result.variants;
+  const s = result.summary;
+  summaryGrid.innerHTML = `
+    <div class="stat"><div class="num">${s.total_variants}</div><div class="lbl">Total variants</div></div>
+    <div class="stat"><div class="num">${s.resolved_pathogenic}</div><div class="lbl">ClinVar Pathogenic</div></div>
+    <div class="stat"><div class="num">${s.resolved_benign}</div><div class="lbl">ClinVar Benign</div></div>
+    <div class="stat"><div class="num">${s.vus_count}</div><div class="lbl">VUS (unresolved)</div></div>
+    <div class="stat"><div class="num">${s.vus_predicted_germline}</div><div class="lbl">VUS → Germline-origin</div></div>
+    <div class="stat"><div class="num">${s.vus_predicted_somatic}</div><div class="lbl">VUS → Somatic-origin</div></div>
+    <div class="stat flagged"><div class="num">${s.flagged_for_reclassification_review}</div><div class="lbl">Flagged for review</div></div>
+  `;
+  resultsSection.classList.add('show');
+  applyFilter('all');
+}
+
+filtersEl.addEventListener('click', (e) => {
+  if (e.target.tagName !== 'BUTTON') return;
+  [...filtersEl.children].forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  applyFilter(e.target.dataset.filter);
+});
+
+function applyFilter(f) {
+  currentFilter = f;
+  let rows = lastVariants;
+  if (f === 'flagged') rows = rows.filter(v => v.reclassification_flag);
+  else if (f === 'vus') rows = rows.filter(v => v.clinvar_status === 'VUS');
+  else if (f === 'pathogenic') rows = rows.filter(v => v.clinvar_status === 'Pathogenic');
+  else if (f === 'benign') rows = rows.filter(v => v.clinvar_status === 'Benign');
+  renderTable(rows);
+}
+
+function pill(status) {
+  const cls = { 'Pathogenic': 'pathogenic', 'Benign': 'benign', 'VUS': 'vus',
+                'Germline': 'germline', 'Somatic': 'somatic' }[status] || 'vus';
+  return status ? `<span class="pill ${cls}">${status}</span>` : '—';
+}
+
+function bandClass(band) {
+  if (band === 'Watch closely') return 'band-watch';
+  if (band === 'Modest signal') return 'band-modest';
+  if (band === 'No distinguishing signal') return 'band-none';
+  if (band === 'Below baseline') return 'band-below';
+  return '';
+}
+
+function renderTable(rows) {
+  if (!rows.length) {
+    resultsBody.innerHTML = '';
+    emptyState.style.display = 'block';
+    return;
+  }
+  emptyState.style.display = 'none';
+  resultsBody.innerHTML = rows.map(v => `
+    <tr class="${v.reclassification_flag ? 'flagged' : ''}">
+      <td><strong>${v.gene ?? '—'}</strong></td>
+      <td>${v.chrom}:${v.pos.toLocaleString()}</td>
+      <td>${v.ref} &gt; ${v.alt}</td>
+      <td>${v.vaf != null ? v.vaf.toFixed(3) : '—'}</td>
+      <td>${v.gnomad_af != null ? Number(v.gnomad_af).toExponential(2) : '—'}</td>
+      <td>${pill(v.clinvar_status)}</td>
+      <td>${pill(v.predicted_class)}</td>
+      <td>${v.predicted_class_confidence != null ? (v.predicted_class_confidence*100).toFixed(1) + '%' : '—'}</td>
+      <td>${v.stage2_score != null ? v.stage2_score.toFixed(3) : '—'}</td>
+      <td class="${bandClass(v.stage2_band)}">${v.stage2_band ?? '—'}</td>
+      <td>${v.reclassification_flag ? '<span class="flag-badge">REVIEW</span>' : ''}</td>
+    </tr>
+  `).join('');
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+# The heavy scientific stack (pandas, numpy, scikit-learn, xgboost, joblib,
+# requests) is already installed in stage1/venv. These are the additional
+# packages the API layer and the generalizable timing model need on top
+# of it. lifelines is only required to load cox_generalizable_model.joblib
+# once stage2_step17_generalizable_timing.py has been run; the app degrades
+# gracefully (timing columns stay blank) if it's not installed.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+lifelines>=0.29
+requests>=2.31
