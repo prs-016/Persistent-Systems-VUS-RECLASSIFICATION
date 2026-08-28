@@ -18,10 +18,8 @@ Every number in this document comes directly from this project's own trained mod
 - [Stage 2 — VUS reclassification forecasting](#stage-2--vus-reclassification-forecasting)
 - [The global VUS watchlist](#the-global-vus-watchlist)
 - [Web app](#web-app)
-- [Real bugs found and fixed](#real-bugs-found-and-fixed)
 - [What was substituted, and why](#what-was-substituted-and-why)
 - [Honest gaps, project-wide](#honest-gaps-project-wide)
-- [How this compares to the original ask](#how-this-compares-to-the-original-ask)
 - [Running it yourself](#running-it-yourself)
 - [Deliverables](#deliverables)
 
@@ -212,20 +210,6 @@ An optional AI explanation panel (Gemini, needs your own API key) writes an indi
 
 See `webapp/README.md` for exact setup and run commands.
 
-## Real bugs found and fixed
-
-Kept as its own list because catching these was as much a part of this project as the modeling:
-
-1. **Stage 1, v1** — `gnomAD_AF > 0.01` was literally the germline-label rule, so 3/4 models hit PR-AUC 1.0000 by pure circularity once it was included as a feature.
-2. **Stage 1, germline expansion** — ClinVar-sourced rows' assumed `vaf=0.5` let models hit PR-AUC ~0.98 on a constant that was assigned by the labeling script itself, not measured.
-3. **Stage 2 feature versioning** — substring-based version checks silently dropped roughly half the intended feature set for several training runs.
-4. **GDC API** — `demographic.gender` silently returns no data under the current schema; the correct field is `demographic.sex_at_birth`. Caught by comparing a suspiciously-all-null batch query against a known-good single-case query.
-5. **Deck editing, zip corruption** — deleting slides via `python-pptx` internals followed by slide duplication could leave duplicate zip entries in the `.pptx`. Fixed by converting slides in place instead of deleting them.
-6. **Deck editing, stale text** — a text-replacement helper only touched the first paragraph of a text box, leaving old text visible in multi-paragraph shapes.
-7. **Deck editing, stretched images** — chart images were force-stretched into placeholders with a different aspect ratio; fixed by fitting within the box instead.
-8. **Stage 2 watchlist rebuild** — a gene-level pathogenic-rate encoding was fit on the resolved-only subset but never merged back onto the full watchlist before scoring, crashing the script at the very last step after all five models had already trained successfully.
-9. **Extended-population join** — the first ANNOVAR-to-`VariationID` join matched on genomic coordinates and silently lost 2.2% of rows, because indels get renormalized during VCF conversion. Fixed by joining positionally within each processed chunk instead, verified row-for-row.
-
 ## What was substituted, and why
 
 - Real matched tumor/normal sequencing data is dbGaP-controlled at GDC for every patient this project touched (confirmed directly via the API's own `access` field). The GATK Panel of Normals was the real open-access alternative tried; it didn't generalize to this exome/MAF footprint.
@@ -241,16 +225,6 @@ Kept as its own list because catching these was as much a part of this project a
 - The generalizable (no-ClinVar-history) model is structurally weaker than the main model by construction (PR-AUC 0.220 vs. 0.4323) — a private-variant-applicability tradeoff, not a bug.
 - Part of Stage 1's 0.95 PR-AUC reflects the germline pool's curation bias toward already-Pathogenic calls, not pure biological separability (see the Stage 1 caveat above) — real-world performance on genuinely ambiguous variants is likely somewhat lower.
 - T2T-CHM13 reference genome migration was investigated (not implemented): the affected gene set touches only 0.74% of the training table and an estimated 0.62% of positive examples, giving a predicted PR-AUC gain of roughly +0.001 to +0.004 — smaller than normal run-to-run noise, for real engineering effort (re-lifting 195,127 positions, re-annotating against a community CHM13 database). Documented rather than pursued.
-
-## How this compares to the original ask
-
-The original problem statement specifically asked for, per VUS: **(a)** probability of reclassification within the next **1–2 years**, and **(b)** the **predicted direction**.
-
-**(a) Time window.** The main classifier answers "will this ever resolve" over the ~7-year tracked window, not a fixed 1–2 year window on its own — but a Cox proportional-hazards survival model was wired up specifically to close that gap, producing real `p_resolved_by_1y`/`p_resolved_by_2y` values per VUS (c-index 0.7601). Worth flagging honestly: those short-window probabilities are small in absolute terms (population mean `p_resolved_by_2y` ≈ 1.3%) even for VUS the classifier ranks near the top, because most real historical reclassifications took years, not months. `reclass_probability` ("will this ever resolve") and the Cox timing columns ("will this resolve specifically within N years") answer genuinely different questions and are both provided, not collapsed into one number.
-
-**(b) Predicted direction.** A separate, real binary classifier answers this directly: **ROC-AUC 0.9462, PR-AUC 0.8621** on the resolved-variant subset — a strong, genuine result, and a meaningfully easier problem than predicting whether a variant resolves at all.
-
-**Scope.** The watchlist was originally scored only against this project's own 47-variant patient file. It now covers all 2,330,308 VUS currently in ClinVar — a real, disclosed expansion made without new data collection, since the underlying features (aside from AF/exonic-function, later closed for real via ANNOVAR) don't require patient-specificity.
 
 ## Running it yourself
 
