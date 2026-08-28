@@ -7,8 +7,8 @@ an uploaded patient variant file (MAF or VCF/"TCF") and returns a full,
 per-variant classification + reclassification-review table.
 
 This module does NOT reimplement the modeling logic — it imports and calls
-the real, already-tested scripts in stage1/scripts/ and loads the real
-trained model artifacts in stage1/data/. If those files are missing (e.g.
+the real, already-tested scripts in code/scripts/ and loads the real
+trained model artifacts in code/data/. If those files are missing (e.g.
 this webapp folder was copied somewhere else), it fails loudly rather than
 silently guessing.
 """
@@ -29,26 +29,26 @@ import pandas as pd
 
 # ---------------------------------------------------------------------------
 # Path wiring: this file lives at webapp/backend/pipeline.py, with webapp/
-# sitting at the top level of the project, next to stage1/ (not inside it).
-# scripts/, config/, data/, annovar/ all live under stage1/.
+# sitting at the top level of the project, next to code/ (not inside it).
+# scripts/, config/, data/, annovar/ all live under code/.
 # ---------------------------------------------------------------------------
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 WEBAPP_DIR = os.path.dirname(BACKEND_DIR)
 PROJECT_ROOT = os.path.dirname(WEBAPP_DIR)
-STAGE1_DIR = os.path.join(PROJECT_ROOT, "stage1")
-SCRIPTS_DIR = os.path.join(STAGE1_DIR, "scripts")
-DATA_DIR = os.path.join(STAGE1_DIR, "data")
+CODE_DIR = os.path.join(PROJECT_ROOT, "code")
+SCRIPTS_DIR = os.path.join(CODE_DIR, "scripts")
+DATA_DIR = os.path.join(CODE_DIR, "data")
 TCGA_DIR = os.path.join(DATA_DIR, "tcga_training")
 STAGE2_DIR = os.path.join(DATA_DIR, "stage2")
 HPA_PATH = os.path.join(DATA_DIR, "hpa", "proteinatlas.tsv")
 
-for p in (STAGE1_DIR, SCRIPTS_DIR):
+for p in (CODE_DIR, SCRIPTS_DIR):
     if p not in sys.path:
         sys.path.insert(0, p)
 
 # cd so the imported scripts' relative "config.thresholds" import resolves
 _orig_cwd = os.getcwd()
-os.chdir(STAGE1_DIR)
+os.chdir(CODE_DIR)
 try:
     import step2_annotate_vep as s2  # noqa: E402
     from config.thresholds import (  # noqa: E402

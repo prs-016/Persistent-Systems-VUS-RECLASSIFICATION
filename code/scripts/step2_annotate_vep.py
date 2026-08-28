@@ -9,7 +9,7 @@ ClinVar clin_sig, gnomAD allele frequencies, COSMIC IDs, and dbSNP rsIDs in
 a single pass, verified against real Ensembl responses before writing this.
 
 ANNOVAR addition (this session, per explicit request): a real local ANNOVAR
-install now lives at stage1/annovar/ (annovar.latest.tar.gz downloaded via
+install now lives at code/annovar/ (annovar.latest.tar.gz downloaded via
 the registration-gated link from openbioinformatics.org, perl scripts +
 hg38 humandb files pulled for real). It runs as a second, independent
 annotation source alongside the VEP REST call above — not a replacement.
@@ -143,7 +143,7 @@ def annotate_with_annovar(df: pd.DataFrame) -> pd.DataFrame:
     table_annovar = os.path.join(ANNOVAR_DIR, "table_annovar.pl")
     if not os.path.exists(table_annovar):
         raise FileNotFoundError(
-            f"ANNOVAR not found at {table_annovar}. Expected stage1/annovar/ "
+            f"ANNOVAR not found at {table_annovar}. Expected code/annovar/ "
             "with table_annovar.pl and humandb/ populated."
         )
 

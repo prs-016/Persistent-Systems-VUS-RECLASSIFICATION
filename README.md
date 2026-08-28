@@ -231,8 +231,8 @@ See `webapp/README.md` for exact setup and run commands.
 **Stage 1** (from `code/scripts/`, with the project's venv active):
 
 ```bash
-python step1_parse_variants.py
-python step2_vep_annotate.py
+python step1_parse.py
+python step2_annotate_vep.py
 python step3_hpa.py
 python step4_features.py
 python step7_clinvar.py
