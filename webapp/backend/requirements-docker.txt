@@ -1,0 +1,16 @@
+# Full dependency set for building the Docker image. requirements.txt only
+# lists what sits on top of the scientific stack because locally that stack
+# already lives in code/venv; the Docker image has no such venv to inherit
+# from, so this file spells out everything, pinned to the versions your
+# local venv is actually running (checked via code/venv/lib/*/site-packages)
+# so behavior in the container matches behavior on your Mac.
+fastapi>=0.115
+uvicorn[standard]>=0.30
+python-multipart>=0.0.9
+requests>=2.31
+lifelines>=0.29
+pandas==2.3.3
+numpy==2.5.1
+scikit-learn==1.9.0
+xgboost==3.3.0
+joblib==1.5.3

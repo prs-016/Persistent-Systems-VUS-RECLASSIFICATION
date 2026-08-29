@@ -718,6 +718,32 @@ tbody tr.detail-row td { white-space: normal; padding: 12px 10px 16px; }
   margin: 0;
   color: var(--ink);
 }
+.ai-summary-items {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ai-summary-item + .ai-summary-item {
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.ai-summary-item-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.ai-summary-item-variant {
+  font-family: var(--font-mono, monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.ai-summary-item-band {
+  font-size: 11px;
+  color: var(--ink-muted);
+}
 .ai-summary-body {
   font-size: 13px;
   line-height: 1.65;

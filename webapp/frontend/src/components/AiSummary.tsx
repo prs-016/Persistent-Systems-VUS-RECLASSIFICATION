@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApiError, fetchAiExplanation } from "../api";
-import type { RunSummary, VariantRow } from "../types";
+import type { AiVariantExplanation, RunSummary, VariantRow } from "../types";
 
 interface Props {
   summary: RunSummary;
@@ -16,7 +16,7 @@ function flaggedPayload(variants: VariantRow[]): VariantRow[] {
 }
 
 export function AiSummary({ summary, variants, tissue }: Props) {
-  const [text, setText] = useState<string | null>(null);
+  const [items, setItems] = useState<AiVariantExplanation[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +26,7 @@ export function AiSummary({ summary, variants, tissue }: Props) {
     setLoading(true);
     setError(null);
     fetchAiExplanation(summary, flagged, tissue)
-      .then((res) => setText(res.explanation))
+      .then((res) => setItems(res.explanations))
       .catch((e: unknown) => {
         setError(
           e instanceof ApiError
@@ -39,7 +39,7 @@ export function AiSummary({ summary, variants, tissue }: Props) {
   }, [summary, tissue, variants]);
 
   useEffect(() => {
-    setText(null);
+    setItems(null);
     setError(null);
     run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -68,16 +68,32 @@ export function AiSummary({ summary, variants, tissue }: Props) {
         </p>
       )}
 
-      {!loading && !error && text && (
+      {!loading && !error && items && items.length > 0 && (
         <>
-          <p className="ai-summary-body">{text}</p>
+          <div className="ai-summary-items">
+            {items.map((item) => (
+              <div className="ai-summary-item" key={`${item.chrom}:${item.pos}:${item.ref}:${item.alt}`}>
+                <div className="ai-summary-item-head">
+                  <span className="ai-summary-item-variant">{item.variant_label}</span>
+                  <span className="ai-summary-item-band">{item.stage2_band}</span>
+                </div>
+                <p className="ai-summary-body">{item.explanation}</p>
+              </div>
+            ))}
+          </div>
           <p className="ai-summary-meta">
             Generated from this run's {flagged.length} flagged variant
-            {flagged.length === 1 ? "" : "s"} by Gemini. This is a plain-language
-            reading aid, not a clinical interpretation, verify against the
-            scores and bands in the table.
+            {flagged.length === 1 ? "" : "s"} by Gemini ({items.length} explained
+            individually). This is a plain-language reading aid, not a clinical
+            interpretation, verify against the scores and bands in the table.
           </p>
         </>
+      )}
+
+      {!loading && !error && items && items.length === 0 && (
+        <p className="ai-summary-error">
+          No flagged variants to explain for this run.
+        </p>
       )}
     </div>
   );

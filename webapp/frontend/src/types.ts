@@ -67,6 +67,21 @@ export type ResultFilter =
   | "germline"
   | "somatic";
 
-export interface AiExplainResponse {
+export interface AiVariantExplanation {
+  gene: string;
+  chrom: string;
+  pos: number;
+  ref: string;
+  alt: string;
+  variant_type: string | null;
+  hgvs_c: string | null;
+  hgvs_p: string | null;
+  variant_label: string;
+  stage2_band: string;
+  stage2_score: number;
   explanation: string;
+}
+
+export interface AiExplainResponse {
+  explanations: AiVariantExplanation[];
 }

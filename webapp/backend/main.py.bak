@@ -31,7 +31,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import ai_explain
-import pipeline_app as pipeline  # memory-lean variant (SQLite-backed lookups) for deployment
+import pipeline
 
 BACKEND_DIR = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIST = os.path.abspath(os.path.join(BACKEND_DIR, "..", "frontend", "dist"))

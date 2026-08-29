@@ -1,0 +1,32 @@
+# Keep the Docker build context (and the resulting image) to just what
+# pipeline_app.py and the frontend build actually need.
+.git
+**/__pycache__
+**/*.pyc
+*.bak
+
+# Your local macOS/Homebrew venv can't run inside the Linux image anyway —
+# requirements-docker.txt installs everything fresh in the container.
+code/venv
+
+# Frontend: installed/built inside the image itself (see Dockerfile stage 1).
+webapp/frontend/node_modules
+webapp/frontend/dist
+
+# The full stage2 folder holds several GB of raw research CSVs and old
+# model versions the deployed app never reads. code/data/stage2_deploy/
+# (not excluded) is the curated subset that actually goes into the image.
+code/data/stage2
+
+# Legacy single-file prototype, not part of the deployed app.
+webapp/_legacy_single_file_version
+
+# Full genome-wide ANNOVAR reference DB (~3.6GB: gnomad211_exome, clinvar,
+# hg19 files, unpruned refGeneWithVer FASTA, etc.) -- none of it is used by
+# the deployed app anymore. pipeline_app.py runs ANNOVAR against
+# code/annovar/humandb_lite/ instead, a ~48MB copy of just
+# refGeneWithVer.txt + refGeneWithVerMrna.fa pruned to the genes this app's
+# own trained lookups cover (see step2_annotate_vep.py's
+# ANNOVAR_HUMANDB_SUBDIR). Local pipeline.py still uses the full folder on
+# disk -- this only keeps it out of the Docker build context/image.
+code/annovar/humandb

@@ -13,6 +13,10 @@ import { TableSkeleton } from "./components/TableSkeleton";
 import type { ClassifyResult, JobState, ResultFilter } from "./types";
 
 const POLL_INTERVAL_MS = 1200;
+// Render's free-tier wake-from-idle can take 50+ seconds; at the 1.2s poll
+// interval this gives a woken-up instance roughly a minute of retries
+// before the UI gives up and reports a real error.
+const MAX_CONSECUTIVE_POLL_FAILURES = 40;
 type Theme = "light" | "dark";
 
 function initialTheme(): Theme {
@@ -32,6 +36,15 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const pollRef = useRef<number | null>(null);
   const uploadPanelRef = useRef<UploadPanelHandle>(null);
+  // How many *consecutive* status-check failures we've seen. Render's free
+  // tier spins down after 15 minutes idle and can take 50+ seconds to wake
+  // back up (see Render's own banner on the dashboard) -- a request landing
+  // in that window comes back as a transient 502/timeout even though the
+  // classify job is queued and running fine server-side. Treating the very
+  // first failed poll as fatal was showing users "Could not complete this
+  // run" for jobs that were actually still in progress. Only give up after
+  // several failures in a row; any successful poll resets the counter.
+  const pollFailuresRef = useRef(0);
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -58,6 +71,7 @@ export default function App() {
   const poll = useCallback((id: string) => {
     fetchJobStatus(id)
       .then((status) => {
+        pollFailuresRef.current = 0;
         setProgressMessage(status.message);
         if (status.status === "error") {
           setJobState("error");
@@ -73,6 +87,16 @@ export default function App() {
         pollRef.current = window.setTimeout(() => poll(id), POLL_INTERVAL_MS);
       })
       .catch((e: unknown) => {
+        pollFailuresRef.current += 1;
+        if (pollFailuresRef.current < MAX_CONSECUTIVE_POLL_FAILURES) {
+          // Likely the free instance waking up from an idle spin-down
+          // (Render warns this can take 50+ seconds) rather than a real
+          // failure -- keep the "running" UI up and quietly retry instead
+          // of reporting an error for a job that's still in progress.
+          setProgressMessage("Reconnecting to the server...");
+          pollRef.current = window.setTimeout(() => poll(id), POLL_INTERVAL_MS);
+          return;
+        }
         setJobState("error");
         setError(e instanceof Error ? e.message : "Lost connection while checking progress.");
       });

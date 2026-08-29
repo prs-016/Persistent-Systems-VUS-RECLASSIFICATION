@@ -43,9 +43,24 @@ VEP_RETRY_BASE_DELAY = 2.0  # seconds; doubles each retry
 
 ANNOVAR_DIR = os.path.join(os.path.dirname(__file__), "..", "annovar")
 ANNOVAR_HUMANDB = os.path.join(ANNOVAR_DIR, "humandb")
+# Overridable via env var (see webapp/backend/pipeline_app.py): a memory-
+# constrained deployment points this at humandb_lite/, a pruned copy of just
+# refGeneWithVer.txt + refGeneWithVerMrna.fa restricted to the ~13k genes
+# this app's own trained lookups (gene_germline_rate, gene_pathogenic_rate,
+# gene_target_encoding, MaveDB coverage) actually cover -- table_annovar.pl's
+# gene-based ExonicFunc/AAChange step loads the *entire* mRNA FASTA into a
+# Perl hash regardless of how few variants are being annotated (measured:
+# ~433MB peak RSS for the full genome-wide file vs. ~154MB for the pruned
+# one), so this is a real memory fix, not just a smaller file. Local runs
+# via pipeline.py are unaffected since this env var is never set for them.
+ANNOVAR_HUMANDB_SUBDIR = os.environ.get("ANNOVAR_HUMANDB_SUBDIR", "humandb")
 ANNOVAR_BUILD = "hg38"
-ANNOVAR_PROTOCOL = "refGeneWithVer,clinvar_20221231,gnomad211_exome"
-ANNOVAR_OPERATION = "g,f,f"
+# Overridable via env var so a memory-constrained deployment (see
+# webapp/backend/pipeline_app.py) can drop the 2.2GB gnomad211_exome filter
+# step without touching this file's defaults, which everyone running
+# locally still gets unchanged.
+ANNOVAR_PROTOCOL = os.environ.get("ANNOVAR_PROTOCOL", "refGeneWithVer,clinvar_20221231,gnomad211_exome")
+ANNOVAR_OPERATION = os.environ.get("ANNOVAR_OPERATION", "g,f,f")
 
 
 def build_region_string(row) -> str:
@@ -153,7 +168,7 @@ def annotate_with_annovar(df: pd.DataFrame) -> pd.DataFrame:
         build_avinput(df, avinput_path)
 
         cmd = [
-            "perl", table_annovar, avinput_path, "humandb" + os.sep,
+            "perl", table_annovar, avinput_path, ANNOVAR_HUMANDB_SUBDIR + os.sep,
             "-buildver", ANNOVAR_BUILD,
             "-out", out_prefix,
             "-remove",
