@@ -4,6 +4,10 @@
 ![Stage 2](https://img.shields.io/badge/Stage%202-Reclassification%20Forecasting-purple)
 ![Status](https://img.shields.io/badge/status-research%20prototype-yellow)
 ![Data](https://img.shields.io/badge/numbers-real%2C%20not%20simulated-brightgreen)
+[![Live app](https://img.shields.io/badge/live%20app-vus--reclassification.onrender.com-success)](https://vus-reclassification-latest.onrender.com)
+
+**Live app:** [vus-reclassification-latest.onrender.com](https://vus-reclassification-latest.onrender.com) — upload a MAF/VCF and see the real pipeline run (free-tier hosting, spins down after 15 minutes idle, first request after that takes ~a minute to wake it back up).
+**Final output:** [Google Drive folder](https://drive.google.com/drive/folders/1JcLgJJ9OV8EDCesRJkCwMi_Gtl22EJk8?usp=sharing) — the full scored watchlist output, mirroring `final_output_csv/` in this repo.
 
 A two-stage pipeline that takes a patient's raw variant file (VCF/MAF), sorts every variant into **Germline**, **Somatic**, or **Variant of Unknown Significance (VUS)**, and then forecasts — for each VUS — the probability it eventually gets reclassified as Pathogenic or Benign, the predicted direction, and roughly when. Includes a full web app (React + FastAPI) that runs the trained models against an uploaded file.
 
@@ -198,7 +202,9 @@ The 2.2M "extended" rows originally used imputed gnomAD AF (0.0) and exonic-func
 
 ## Web app
 
-`webapp/` (React + TypeScript + Vite frontend, FastAPI backend) uploads a patient MAF/VCF, runs it through the real trained Stage 1 + Stage 2 pipeline, and shows a filterable, expandable results table with a reclassification-review flag. It sits next to `code/` (not inside it) since it reads model weights and reference data from there directly.
+**Live at [vus-reclassification-latest.onrender.com](https://vus-reclassification-latest.onrender.com)** — upload a patient MAF/VCF and it runs against the real trained pipeline, no local setup needed. Deployed on Render's free tier as a single Docker image (frontend build + FastAPI backend + ANNOVAR + reference databases + trained model artifacts, everything baked in, nothing downloaded at runtime — see `DEPLOY.md`). Free-tier tradeoffs, disclosed rather than silently hit: the service spins down after 15 minutes idle (first request after that takes ~a minute to wake it back up), and RAM is capped at 512MB, which is genuinely tight once pandas/numpy/xgboost/ANNOVAR are all loaded — the app builds SQLite-backed watchlist/HPA caches on first query specifically to fit that budget, instead of loading the full 2.3M-row watchlist into memory at startup.
+
+`webapp/` itself (React + TypeScript + Vite frontend, FastAPI backend) uploads a patient MAF/VCF, runs it through the real trained Stage 1 + Stage 2 pipeline, and shows a filterable, expandable results table with a reclassification-review flag. It sits next to `code/` (not inside it) since it reads model weights and reference data from there directly.
 
 **Three real scoring tiers, and the table tells you which one applied:**
 
@@ -208,7 +214,7 @@ The 2.2M "extended" rows originally used imputed gnomAD AF (0.0) and exonic-func
 
 An optional AI explanation panel (Gemini, needs your own API key) writes an individual, grounded explanation for each of the top 3 flagged variants — reading only the pipeline's own real numbers (score, band, source tier, Stage 1 origin, HPA breadth, gnomAD AF, MAVE coverage, COSMIC hotspot status, direction/timing), never inventing evidence the pipeline doesn't have. The app works identically without a key; the panel just shows an error.
 
-See `webapp/README.md` for exact setup and run commands.
+To run it locally instead, see [Running it yourself](#running-it-yourself) below. To redeploy or stand up your own instance, see `DEPLOY.md`.
 
 ## What was substituted, and why
 
@@ -248,7 +254,7 @@ python 03_build_watchlist/01_finish_watchlist_after_bugfix.py
 python 04_annovar_real_af_upgrade/04_rebuild_final_watchlist_v18.py
 ```
 
-**Web app**, production-style (one process, one URL):
+**Web app**, production-style (one process, one URL) — this is what's already running at the live link above, this just runs it on your own machine instead:
 
 ```bash
 cd webapp/frontend && npm install && npm run build
@@ -256,11 +262,12 @@ cd ../backend && ../../code/venv/bin/pip install -r requirements.txt
 ../../code/venv/bin/uvicorn main:app --host 0.0.0.0 --port 8765
 ```
 
-Then open `http://localhost:8765`. See `webapp/README.md` for the hot-reload development setup and the optional Gemini explanation panel.
+Then open `http://localhost:8765`. To containerize and deploy it yourself (Docker + Render, or elsewhere), see `DEPLOY.md`.
 
 ## Deliverables
 
 - **This README** — the full record of what was built, tried, found, and fixed across both stages.
+- **The live web app** — [vus-reclassification-latest.onrender.com](https://vus-reclassification-latest.onrender.com).
 - **A combined slide deck** (`VUS_Results_final_updated.pptx`) covering the full pipeline, EDA, model comparisons, confusion matrices for every model in both stages, the per-cancer-type training breakdown, and this project's own patient's real end-to-end results.
-- **`final_output_csv/`** — this project's own patient's final scored output.
+- **`final_output_csv/`** — this project's own patient's final scored output, also mirrored on [Google Drive](https://drive.google.com/drive/folders/1JcLgJJ9OV8EDCesRJkCwMi_Gtl22EJk8?usp=sharing).
 - **`code/data/`** — every intermediate model version, feature table, and fit artifact, preserved on disk (not overwritten), specifically so any result in this document can be re-derived or rolled back to.
